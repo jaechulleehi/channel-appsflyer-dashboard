@@ -1,0 +1,401 @@
+<title>채널 x 앱스플라이어 성과 리포트</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --paper: #eeece4;
+    --paper-raised: #f7f5ee;
+    --ink: #1c2320;
+    --ink-dim: #5b6259;
+    --line: #d8d4c6;
+    --accent: #b5751b;
+    --accent-ink: #6e4310;
+    --google: #3457c9;
+    --meta: #c22e63;
+    --naver: #2f8f4e;
+    --good: #2f8f4e;
+    --warn: #b5751b;
+    --bad: #b3402f;
+    --shadow: 0 1px 2px rgba(28, 35, 32, 0.06), 0 8px 24px -12px rgba(28, 35, 32, 0.18);
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #14181a;
+    --paper-raised: #1b2124;
+    --ink: #e9e6dc;
+    --ink-dim: #9aa39a;
+    --line: #2c3436;
+    --accent: #e0a648;
+    --accent-ink: #f2c887;
+    --google: #7c9bff;
+    --meta: #ff7fa8;
+    --naver: #63d18a;
+    --good: #63d18a;
+    --warn: #e0a648;
+    --bad: #ff8b76;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14181a;
+      --paper-raised: #1b2124;
+      --ink: #e9e6dc;
+      --ink-dim: #9aa39a;
+      --line: #2c3436;
+      --accent: #e0a648;
+      --accent-ink: #f2c887;
+      --google: #7c9bff;
+      --meta: #ff7fa8;
+      --naver: #63d18a;
+      --good: #63d18a;
+      --warn: #e0a648;
+      --bad: #ff8b76;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: ui-sans-serif, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.45;
+  }
+
+  .num { font-family: ui-monospace, "SF Mono", "Roboto Mono", monospace; font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+
+  h1 {
+    font-family: ui-serif, Georgia, "Noto Serif KR", serif;
+    font-weight: 600;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    margin: 0 0 6px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .meta-line { color: var(--ink-dim); font-size: 0.86rem; }
+  .meta-line .num { color: var(--ink); }
+
+  .filecount {
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+
+  .filecount b { color: var(--ink); font-weight: 600; }
+
+  section { margin-bottom: 44px; }
+
+  h2 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-dim);
+    font-weight: 600;
+    margin: 0 0 14px;
+  }
+
+  /* KPI strip */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .kpi {
+    background: var(--paper-raised);
+    padding: 16px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .kpi .label { font-size: 0.72rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .kpi .value { font-size: 1.3rem; font-weight: 600; }
+  .kpi .sub { font-size: 0.72rem; color: var(--accent-ink); }
+
+  .kpi .bar-track { height: 3px; background: var(--line); border-radius: 2px; margin-top: 2px; overflow: hidden; }
+  .kpi .bar-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+
+  @media (max-width: 760px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 460px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* Channel comparison */
+  .channel-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; }
+  @media (max-width: 720px) { .channel-grid { grid-template-columns: 1fr; } }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  thead th {
+    text-align: right;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-dim);
+    font-weight: 600;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  thead th:first-child, tbody td:first-child { text-align: left; }
+
+  tbody td {
+    padding: 9px 12px;
+    text-align: right;
+    font-size: 0.86rem;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+  .chip::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dot, var(--ink-dim));
+  }
+  .chip.google { --dot: var(--google); }
+  .chip.meta { --dot: var(--meta); }
+  .chip.naver { --dot: var(--naver); }
+
+  .roas-good { color: var(--good); }
+  .roas-warn { color: var(--warn); }
+  .roas-bad { color: var(--bad); }
+
+  /* bar chart (channel cost/revenue) */
+  .barchart {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .bar-row { display: grid; grid-template-columns: 90px 1fr 90px; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-row .name { font-size: 0.82rem; font-weight: 600; }
+  .bar-row .track { height: 22px; background: var(--paper); border-radius: 5px; overflow: hidden; border: 1px solid var(--line); }
+  .bar-row .fill { height: 100%; border-radius: 5px 0 0 5px; }
+  .bar-row .val { font-size: 0.8rem; text-align: right; }
+  .legend { display: flex; gap: 16px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.75rem; color: var(--ink-dim); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* campaign bars */
+  .camp-row { display: grid; grid-template-columns: 220px 1fr 110px; gap: 12px; align-items: center; padding: 7px 0; }
+  .camp-row .track { height: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .camp-row .fill { height: 100%; }
+  .camp-row .label { font-size: 0.78rem; display: flex; align-items: center; gap: 6px; }
+  .camp-row .stat { font-size: 0.76rem; text-align: right; color: var(--ink-dim); }
+  .camp-wrap { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; box-shadow: var(--shadow); }
+
+  /* creative table roas bullet */
+  .roas-cell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .roas-cell .mini-track { width: 60px; height: 6px; border-radius: 3px; background: var(--paper); border: 1px solid var(--line); overflow: hidden; }
+  .roas-cell .mini-fill { height: 100%; }
+
+  .table-scroll { overflow-x: auto; border-radius: 10px; }
+
+  footer {
+    color: var(--ink-dim);
+    font-size: 0.76rem;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    margin-top: 8px;
+  }
+
+  .accuracy-tag {
+    display: inline-block;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    color: var(--accent-ink);
+    margin-left: 6px;
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <h1>채널 × 앱스플라이어 성과 리포트</h1>
+      <div class="meta-line">집계 기간 <span class="num" id="date-range"></span> · 일/캠페인/그룹/소재 기준 조인</div>
+    </div>
+    <div class="filecount">
+      channel CSV <b id="n-channel"></b>개 · appsflyer CSV <b id="n-af"></b>개 불러옴<br />
+      매칭 안 된 행 <b id="unmatched"></b>개<span class="accuracy-tag">정확 · 원본 합산</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>핵심 지표</h2>
+    <div class="kpi-grid" id="kpi-grid"></div>
+  </section>
+
+  <section>
+    <h2>채널별 비교</h2>
+    <div class="channel-grid">
+      <div class="table-scroll">
+        <table id="channel-table"></table>
+      </div>
+      <div class="barchart" id="channel-bars"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>캠페인별 비용 · ROAS</h2>
+    <div class="camp-wrap" id="campaign-bars"></div>
+  </section>
+
+  <section>
+    <h2>소재별 성과 <span style="font-weight:400; text-transform:none; letter-spacing:0;">(구매매출 순)</span></h2>
+    <div class="table-scroll">
+      <table id="creative-table"></table>
+    </div>
+  </section>
+
+  <footer>
+    CTR·CVR·CPA·ROAS는 channel(노출·클릭·비용)과 appsflyer(전환) 원본 합산값 기반 계산값입니다 <span class="accuracy-tag">추정 아님</span>.
+    데이터는 이 리포트를 생성한 시점의 스냅샷이며, 새 날짜 파일이 추가되면 재생성이 필요합니다.
+  </footer>
+</div>
+
+<script id="dashboard-data" type="application/json">
+{"kpi": {"impressions": 1716415, "clicks": 47442, "cost": 9113222, "signups": 4919, "purchases": 1765, "revenue": 113297820, "ctr": 2.76, "cvr": 3.72, "cpa": 5163, "roas": 1243.2}, "by_channel": [{"채널": "구글", "노출": 1116892, "클릭": 29837, "비용": 6065672, "회원가입": 3253, "구매": 1045, "구매매출": 60919962, "CTR": 2.67, "CPA": 5804.0, "ROAS": 1004.3}, {"채널": "네이버", "노출": 109962, "클릭": 7872, "비용": 925534, "회원가입": 1013, "구매": 527, "구매매출": 40778858, "CTR": 7.16, "CPA": 1756.0, "ROAS": 4406.0}, {"채널": "메타", "노출": 489561, "클릭": 9733, "비용": 2122016, "회원가입": 653, "구매": 193, "구매매출": 11599000, "CTR": 1.99, "CPA": 10995.0, "ROAS": 546.6}], "by_campaign": [{"채널": "구글", "캠페인": "GGL_CMP_01_플러스가입", "비용": 3055280, "클릭": 15702, "구매": 525, "구매매출": 30991586, "ROAS": 1014.4}, {"채널": "구글", "캠페인": "GGL_CMP_03_첫구매", "비용": 2401146, "클릭": 10507, "구매": 359, "구매매출": 21126644, "ROAS": 879.9}, {"채널": "메타", "캠페인": "META_CMP_02_룩얼라이크", "비용": 795256, "클릭": 3738, "구매": 64, "구매매출": 3357686, "ROAS": 422.2}, {"채널": "메타", "캠페인": "META_CMP_01_신규유저", "비용": 763581, "클릭": 2888, "구매": 48, "구매매출": 2195632, "ROAS": 287.5}, {"채널": "구글", "캠페인": "GGL_CMP_02_리타겟팅", "비용": 609246, "클릭": 3628, "구매": 161, "구매매출": 8801732, "ROAS": 1444.7}, {"채널": "메타", "캠페인": "META_CMP_03_재구매", "비용": 563179, "클릭": 3107, "구매": 81, "구매매출": 6045682, "ROAS": 1073.5}, {"채널": "네이버", "캠페인": "NVR_CMP_03_재구매", "비용": 540892, "클릭": 3699, "구매": 226, "구매매출": 20028641, "ROAS": 3702.9}, {"채널": "네이버", "캠페인": "NVR_CMP_02_일반KW", "비용": 317993, "클릭": 2934, "구매": 149, "구매매출": 9597628, "ROAS": 3018.2}, {"채널": "네이버", "캠페인": "NVR_CMP_01_브랜드KW", "비용": 66649, "클릭": 1239, "구매": 152, "구매매출": 11152589, "ROAS": 16733.3}], "by_creative": [{"채널": "네이버", "그룹": "논타겟", "소재": "TXT_플러스멤버십_겨울_A_v1", "비용": 66649, "클릭": 1239, "구매": 152, "구매매출": 11152589, "CPA": 438.0, "ROAS": 16733.3}, {"채널": "구글", "그룹": "유사타겟", "소재": "CRS_플러스멤버십_겨울_v1", "비용": 500324, "클릭": 2651, "구매": 111, "구매매출": 7252739, "CPA": 4507.0, "ROAS": 1449.6}, {"채널": "구글", "그룹": "논타겟", "소재": "IMG_적립혜택_겨울_v2", "비용": 454294, "클릭": 2547, "구매": 95, "구매매출": 5622206, "CPA": 4782.0, "ROAS": 1237.6}, {"채널": "네이버", "그룹": "논타겟", "소재": "TXT_플러스멤버십_겨울_B_v1", "비용": 140507, "클릭": 1306, "구매": 69, "구매매출": 5313564, "CPA": 2036.0, "ROAS": 3781.7}, {"채널": "구글", "그룹": "논타겟", "소재": "VID_적립혜택_겨울_A_v1", "비용": 463500, "클릭": 1807, "구매": 63, "구매매출": 4708190, "CPA": 7357.0, "ROAS": 1015.8}, {"채널": "네이버", "그룹": "윈백", "소재": "IMG_배송혜택_겨울_A_v1", "비용": 136352, "클릭": 866, "구매": 56, "구매매출": 4322631, "CPA": 2435.0, "ROAS": 3170.2}, {"채널": "네이버", "그룹": "논타겟", "소재": "TXT_할인쿠폰_겨울_A_v1", "비용": 177486, "클릭": 1628, "구매": 80, "구매매출": 4284064, "CPA": 2219.0, "ROAS": 2413.7}, {"채널": "구글", "그룹": "논타겟", "소재": "CRS_플러스멤버십_겨울_v1", "비용": 418912, "클릭": 2503, "구매": 79, "구매매출": 4207251, "CPA": 5303.0, "ROAS": 1004.3}, {"채널": "구글", "그룹": "유사타겟", "소재": "VID_적립혜택_겨울_A_v1", "비용": 337507, "클릭": 1743, "구매": 71, "구매매출": 3891289, "CPA": 4754.0, "ROAS": 1153.0}, {"채널": "네이버", "그룹": "윈백", "소재": "VID_적립혜택_겨울_B_v1", "비용": 106684, "클릭": 664, "구매": 41, "구매매출": 3873020, "CPA": 2602.0, "ROAS": 3630.4}, {"채널": "구글", "그룹": "유사타겟", "소재": "IMG_플러스멤버십_겨울_B_v1", "비용": 316168, "클릭": 1439, "구매": 62, "구매매출": 3766568, "CPA": 5099.0, "ROAS": 1191.3}, {"채널": "네이버", "그룹": "윈백", "소재": "CRS_신상품_겨울_v1", "비용": 100983, "클릭": 761, "구매": 51, "구매매출": 3696320, "CPA": 1980.0, "ROAS": 3660.3}, {"채널": "네이버", "그룹": "VIP", "소재": "IMG_배송혜택_겨울_A_v1", "비용": 73989, "클릭": 618, "구매": 36, "구매매출": 3650648, "CPA": 2055.0, "ROAS": 4934.0}, {"채널": "구글", "그룹": "유사타겟", "소재": "IMG_적립혜택_겨울_B_v1", "비용": 478313, "클릭": 2429, "구매": 66, "구매매출": 3643008, "CPA": 7247.0, "ROAS": 761.6}, {"채널": "구글", "그룹": "유사타겟", "소재": "CRS_할인쿠폰_겨울_v1", "비용": 250347, "클릭": 1376, "구매": 72, "구매매출": 3639127, "CPA": 3477.0, "ROAS": 1453.6}, {"채널": "구글", "그룹": "리마케팅", "소재": "VID_할인쿠폰_겨울_A_v1", "비용": 243183, "클릭": 1283, "구매": 72, "구매매출": 3602255, "CPA": 3378.0, "ROAS": 1481.3}, {"채널": "구글", "그룹": "유사타겟", "소재": "IMG_적립혜택_겨울_v2", "비용": 359608, "클릭": 1978, "구매": 60, "구매매출": 3292792, "CPA": 5993.0, "ROAS": 915.7}, {"채널": "구글", "그룹": "리마케팅", "소재": "CRS_특가_겨울_v1", "비용": 172031, "클릭": 1155, "구매": 49, "구매매출": 3019696, "CPA": 3511.0, "ROAS": 1755.3}, {"채널": "구글", "그룹": "논타겟", "소재": "IMG_적립혜택_겨울_B_v1", "비용": 486459, "클릭": 2036, "구매": 50, "구매매출": 2910286, "CPA": 9729.0, "ROAS": 598.3}, {"채널": "구글", "그룹": "논타겟", "소재": "VID_플러스멤버십_겨울_A_v1", "비용": 372882, "클릭": 1464, "구매": 43, "구매매출": 2692197, "CPA": 8672.0, "ROAS": 722.0}, {"채널": "구글", "그룹": "논타겟", "소재": "IMG_플러스멤버십_겨울_B_v1", "비용": 254765, "클릭": 1576, "구매": 44, "구매매출": 2595379, "CPA": 5790.0, "ROAS": 1018.7}, {"채널": "네이버", "그룹": "VIP", "소재": "VID_적립혜택_겨울_B_v1", "비용": 71428, "클릭": 402, "구매": 24, "구매매출": 2560870, "CPA": 2976.0, "ROAS": 3585.2}, {"채널": "구글", "그룹": "논타겟", "소재": "CRS_할인쿠폰_겨울_v1", "비용": 385020, "클릭": 1116, "구매": 37, "구매매출": 2334744, "CPA": 10406.0, "ROAS": 606.4}, {"채널": "구글", "그룹": "리마케팅", "소재": "IMG_할인쿠폰_겨울_B_v1", "비용": 194032, "클릭": 1190, "구매": 40, "구매매출": 2179781, "CPA": 4851.0, "ROAS": 1123.4}, {"채널": "네이버", "그룹": "VIP", "소재": "CRS_신상품_겨울_v1", "비용": 51456, "클릭": 388, "구매": 18, "구매매출": 1925152, "CPA": 2859.0, "ROAS": 3741.4}, {"채널": "메타", "그룹": "윈백", "소재": "IMG_배송혜택_겨울_A_v1", "비용": 128373, "클릭": 926, "구매": 24, "구매매출": 1857574, "CPA": 5349.0, "ROAS": 1447.0}, {"채널": "구글", "그룹": "유사타겟", "소재": "VID_플러스멤버십_겨울_A_v1", "비용": 378327, "클릭": 1544, "구매": 31, "구매매출": 1562454, "CPA": 12204.0, "ROAS": 413.0}, {"채널": "메타", "그룹": "유사타겟", "소재": "IMG_할인쿠폰_겨울_B_v1", "비용": 186023, "클릭": 950, "구매": 21, "구매매출": 1308093, "CPA": 8858.0, "ROAS": 703.2}, {"채널": "메타", "그룹": "윈백", "소재": "CRS_신상품_겨울_v1", "비용": 131336, "클릭": 570, "구매": 13, "구매매출": 1094330, "CPA": 10103.0, "ROAS": 833.2}, {"채널": "메타", "그룹": "유사타겟", "소재": "CRS_특가_겨울_v1", "비용": 287277, "클릭": 1268, "구매": 20, "구매매출": 1048405, "CPA": 14364.0, "ROAS": 364.9}, {"채널": "메타", "그룹": "VIP", "소재": "CRS_신상품_겨울_v1", "비용": 48788, "클릭": 377, "구매": 12, "구매매출": 1046746, "CPA": 4066.0, "ROAS": 2145.5}, {"채널": "메타", "그룹": "유사타겟", "소재": "VID_플러스멤버십_겨울_A_v1", "비용": 321956, "클릭": 1520, "구매": 23, "구매매출": 1001188, "CPA": 13998.0, "ROAS": 311.0}, {"채널": "메타", "그룹": "윈백", "소재": "VID_적립혜택_겨울_B_v1", "비용": 139801, "클릭": 643, "구매": 17, "구매매출": 979852, "CPA": 8224.0, "ROAS": 700.9}, {"채널": "메타", "그룹": "논타겟", "소재": "VID_플러스멤버십_겨울_A_v1", "비용": 275075, "클릭": 1118, "구매": 24, "구매매출": 979712, "CPA": 11461.0, "ROAS": 356.2}, {"채널": "메타", "그룹": "VIP", "소재": "VID_적립혜택_겨울_B_v1", "비용": 63515, "클릭": 368, "구매": 10, "구매매출": 778240, "CPA": 6352.0, "ROAS": 1225.3}, {"채널": "메타", "그룹": "논타겟", "소재": "CRS_플러스멤버십_겨울_v1", "비용": 189131, "클릭": 702, "구매": 13, "구매매출": 729543, "CPA": 14549.0, "ROAS": 385.7}, {"채널": "메타", "그룹": "논타겟", "소재": "IMG_적립혜택_겨울_B_v1", "비용": 299375, "클릭": 1068, "구매": 11, "구매매출": 486377, "CPA": 27216.0, "ROAS": 162.5}, {"채널": "메타", "그룹": "VIP", "소재": "IMG_배송혜택_겨울_A_v1", "비용": 51366, "클릭": 223, "구매": 5, "구매매출": 288940, "CPA": 10273.0, "ROAS": 562.5}], "unmatched": 0, "dates": ["2025-01-01"], "n_channel_files": 1, "n_af_files": 1}
+</script>
+
+<script>
+(function () {
+  const data = JSON.parse(document.getElementById("dashboard-data").textContent);
+  const fmt = (n) => Math.round(n).toLocaleString("ko-KR");
+  const fmtMoney = (n) => "₩" + fmt(n);
+  const channelClass = (name) => name === "구글" ? "google" : name === "메타" ? "meta" : name === "네이버" ? "naver" : "";
+  const channelColorVar = (name) => name === "구글" ? "var(--google)" : name === "메타" ? "var(--meta)" : name === "네이버" ? "var(--naver)" : "var(--ink-dim)";
+  const roasClass = (v) => v >= 1000 ? "roas-good" : v >= 300 ? "roas-warn" : "roas-bad";
+
+  document.getElementById("date-range").textContent = data.dates.length > 1
+    ? `${data.dates[0]} ~ ${data.dates[data.dates.length - 1]}`
+    : data.dates[0];
+  document.getElementById("n-channel").textContent = data.n_channel_files;
+  document.getElementById("n-af").textContent = data.n_af_files;
+  document.getElementById("unmatched").textContent = data.unmatched;
+
+  // ---- KPI strip ----
+  const kpi = data.kpi;
+  const kpiDefs = [
+    { label: "노출", value: fmt(kpi.impressions) },
+    { label: "클릭", value: fmt(kpi.clicks), sub: `CTR ${kpi.ctr}%` },
+    { label: "비용", value: fmtMoney(kpi.cost) },
+    { label: "회원가입", value: fmt(kpi.signups) },
+    { label: "구매", value: fmt(kpi.purchases), sub: `CPA ${fmtMoney(kpi.cpa)}` },
+    { label: "ROAS", value: kpi.roas.toLocaleString("ko-KR") + "%", sub: fmtMoney(kpi.revenue) + " 매출" },
+  ];
+  const maxBar = { 노출: kpi.impressions, 클릭: kpi.clicks, 비용: kpi.cost, 회원가입: kpi.signups, 구매: kpi.purchases, ROAS: kpi.roas };
+  document.getElementById("kpi-grid").innerHTML = kpiDefs.map(k => `
+    <div class="kpi">
+      <div class="label">${k.label}</div>
+      <div class="value num">${k.value}</div>
+      ${k.sub ? `<div class="sub num">${k.sub}</div>` : ""}
+    </div>`).join("");
+
+  // ---- Channel table ----
+  const byChannel = [...data.by_channel].sort((a, b) => b.비용 - a.비용);
+  const chTable = document.getElementById("channel-table");
+  chTable.innerHTML = `
+    <thead><tr><th>채널</th><th>비용</th><th>구매</th><th>CTR</th><th>CPA</th><th>ROAS</th></tr></thead>
+    <tbody>${byChannel.map(r => `
+      <tr>
+        <td><span class="chip ${channelClass(r.채널)}">${r.채널}</span></td>
+        <td class="num">${fmtMoney(r.비용)}</td>
+        <td class="num">${fmt(r.구매)}</td>
+        <td class="num">${r.CTR}%</td>
+        <td class="num">${fmtMoney(r.CPA)}</td>
+        <td class="num ${roasClass(r.ROAS)}">${r.ROAS}%</td>
+      </tr>`).join("")}</tbody>`;
+
+  // ---- Channel bar chart (cost) ----
+  const maxCost = Math.max(...byChannel.map(r => r.비용));
+  document.getElementById("channel-bars").innerHTML = `
+    ${byChannel.map(r => `
+      <div class="bar-row">
+        <div class="name">${r.채널}</div>
+        <div class="track"><div class="fill" style="width:${(r.비용 / maxCost * 100).toFixed(1)}%; background:${channelColorVar(r.채널)}"></div></div>
+        <div class="val num">${fmtMoney(r.비용)}</div>
+      </div>`).join("")}
+    <div class="legend">
+      ${byChannel.map(r => `<span><i style="background:${channelColorVar(r.채널)}"></i>${r.채널} 비용</span>`).join("")}
+    </div>`;
+
+  // ---- Campaign bars ----
+  const byCampaign = [...data.by_campaign].sort((a, b) => b.비용 - a.비용);
+  const maxCampCost = Math.max(...byCampaign.map(r => r.비용));
+  document.getElementById("campaign-bars").innerHTML = byCampaign.map(r => `
+    <div class="camp-row">
+      <div class="label"><span class="chip ${channelClass(r.채널)}"></span>${r.캠페인}</div>
+      <div class="track"><div class="fill" style="width:${(r.비용 / maxCampCost * 100).toFixed(1)}%; background:${channelColorVar(r.채널)}"></div></div>
+      <div class="stat num">${fmtMoney(r.비용)} · <span class="${roasClass(r.ROAS)}">${r.ROAS}%</span></div>
+    </div>`).join("");
+
+  // ---- Creative table ----
+  const byCreative = [...data.by_creative].sort((a, b) => b.구매매출 - a.구매매출);
+  const maxCreativeRoas = Math.max(...byCreative.map(r => r.ROAS));
+  const creTable = document.getElementById("creative-table");
+  creTable.innerHTML = `
+    <thead><tr><th>채널</th><th>그룹</th><th>소재</th><th>비용</th><th>구매</th><th>구매매출</th><th>CPA</th><th>ROAS</th></tr></thead>
+    <tbody>${byCreative.map(r => `
+      <tr>
+        <td><span class="chip ${channelClass(r.채널)}">${r.채널}</span></td>
+        <td>${r.그룹}</td>
+        <td>${r.소재}</td>
+        <td class="num">${fmtMoney(r.비용)}</td>
+        <td class="num">${fmt(r.구매)}</td>
+        <td class="num">${fmtMoney(r.구매매출)}</td>
+        <td class="num">${fmtMoney(r.CPA)}</td>
+        <td class="num">
+          <div class="roas-cell">
+            <span class="${roasClass(r.ROAS)}">${r.ROAS}%</span>
+            <span class="mini-track"><span class="mini-fill" style="width:${Math.min(100, r.ROAS / maxCreativeRoas * 100).toFixed(1)}%; background:${channelColorVar(r.채널)}"></span></span>
+          </div>
+        </td>
+      </tr>`).join("")}</tbody>`;
+})();
+</script>
