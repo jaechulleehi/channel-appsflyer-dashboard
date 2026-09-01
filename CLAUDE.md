@@ -2,88 +2,133 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What this repo is
+## 이 저장소가 하는 일
 
-A local working folder for performance-marketing EDA: daily channel-spend CSVs and AppsFlyer
-attribution CSVs are dropped in here, joined, and turned into dashboards. No build/lint/test
-tooling — this is a data + reporting workspace, not an application.
+퍼포먼스 마케팅 일간 리포팅. 매일 전날치 **채널 데이터**(매체 리포트)와 **앱스플라이어
+데이터**(어트리뷰션 리포트) CSV 두 개를 이 폴더에 떨어뜨리면, 조인·전처리해서 대시보드와
+정적 차트로 인사이트를 뽑는다.
 
-## Files
+애플리케이션이 아니라 **데이터 워크스페이스**다. 빌드·린트 파이프라인이 없고, 테스트는
+계산 로직에만 있다.
 
-- `*_channel.csv` — media channel report (impressions/clicks/cost). One file per day,
-  named `YYYY-MM-DD_channel.csv`.
-- `*_appsflyer.csv` — AppsFlyer attribution report (clicks/signups/purchases/revenue). Same
-  date-prefixed naming: `YYYY-MM-DD_appsflyer.csv`.
-- `streamlit_app.py` — live dashboard. Globs **all** `*_channel.csv` / `*_appsflyer.csv` in this
-  folder at load time (`@st.cache_data(ttl=600)`), so dropping in a new day's pair and refreshing
-  picks it up automatically — no code change needed.
-- `dashboard.html` — static snapshot report generated from the same join logic. Data is baked into
-  the HTML at generation time; re-run the generation step after new dates are added (see below).
-- `.claude/launch.json` — preview server config (`python3 -m streamlit run streamlit_app.py`,
-  port 8501). Use `python3 -m streamlit`, not the bare `streamlit` binary — it isn't on PATH here.
-
-## Running
+## 명령어
 
 ```bash
-python3 -m streamlit run streamlit_app.py --server.port 8501
+python3 -m streamlit run streamlit_app.py --server.port 8501   # 대시보드
+python3 eda_charts.py                                          # 정적 PNG → charts/
+python3 -m pytest test_metrics.py -q                           # 지표 회귀 테스트
+python3 -m pytest test_metrics.py::test_ROAS_분해식 -v          # 단일 테스트
 ```
 
-To regenerate `dashboard.html` after adding new dated CSVs, re-run the same aggregation logic
-used in `streamlit_app.py`'s `load_and_merge()` and dump into the `dashboard.html` template's
-`__DATA_JSON__` placeholder (see how it was built — inline Python computing `by_channel` /
-`by_campaign` / `by_creative` aggregates, then string-replacing into the HTML `<script>` block).
+의존성: `pip install -r requirements.txt` (streamlit, pandas, altair, matplotlib, seaborn,
+pyarrow, pytest)
 
-## Join logic (the core thing to preserve)
+## 데이터 추가
 
-Join key across both files: **일(date) + 캠페인 + 그룹 + 소재** + 채널 (channel name, after mapping).
+`YYYY-MM-DD_channel.csv` + `YYYY-MM-DD_appsflyer.csv` 쌍을 폴더에 넣고 새로고침하면 끝.
+글롭 기반이라 코드 수정이 필요 없다. 파일당 한 번 `.cache/*.parquet`으로 정규화 캐시가
+생기고, CSV가 더 새로우면 자동 재생성된다.
 
-`appsflyer` uses "미디어소스" (media source) instead of "채널"; it must be mapped before joining:
+## 아키텍처
 
-| appsflyer 미디어소스   | channel 채널 |
-|-------------------------|--------------|
-| `googleadwords_int`     | 구글          |
-| `Facebook Ads`          | 메타          |
-| `naver_search`          | 네이버        |
+레이어가 의존성 방향으로 갈린다. **이 방향을 거스르지 말 것.**
 
-**New channel checklist:** adding a 4th channel (e.g. TikTok) means updating this mapping in
-*both* `streamlit_app.py` (`SOURCE_TO_CHANNEL`) and the `dashboard.html` generation script —
-there is no single shared source of truth for it yet.
+```
+palette.py          색·금액 포맷        의존성 0
+    ↑
+marketing_data.py   로드·조인·지표 계산   pandas만 (streamlit 금지)
+    ↑                                    ↑
+app_config.py       캐시·목표치           eda_charts.py (정적 PNG)
+    ↑
+pages/*.py          화면
+```
 
-Known schema asymmetry: `channel` has 노출(impressions) and 비용(cost); `appsflyer` does not.
-`channel` and `appsflyer` both report 회원가입/구매/구매매출 but from different attribution
-logic — the merge suffixes these `_channel` / `_af`. Dashboards currently use the `_channel`
-suffixed columns as the source of truth for conversions/revenue (media-side report), not `_af`.
-If that's wrong for your use case, decide explicitly rather than silently mixing sources.
+`marketing_data.py`가 streamlit에 의존하면 `eda_charts.py`가 못 쓴다. 색·포맷을
+`app_config.py`에 두면 정적 차트와 화면 색이 갈라진다. 실제로 그래서 `palette.py`가 생겼다.
 
-The join is `how="outer"` with `indicator=True` — unmatched rows are surfaced as a warning/count,
-not dropped silently. Investigate unmatched rows before trusting aggregate totals.
+**화면 2개는 역할이 정반대다.**
+- `pages/briefing.py` — 매일 아침 30초. **정상이면 침묵한다.** 탐색 기능을 넣지 말 것
+- `pages/workbench.py` — 주 1~2회 분석. 필터·드릴다운·교차분석
 
-## Metric definitions in use
+## 조인 규칙 (가장 중요)
 
-- CTR = 클릭 / 노출 (channel-side)
-- CVR = 구매 / 클릭 (channel-side, click-based — not impression-based)
-- CPA = 비용 / 구매
-- ROAS = 구매매출 / 비용 × 100 (%)
+조인 키: **일 + 캠페인 + 그룹 + 소재 + 채널**
 
-These are computed metrics, not sourced from either CSV directly — confirm this matches your
-team's definitions before reporting numbers externally (e.g. some teams define CVR against
-signups, not purchases).
+`appsflyer`는 `채널` 대신 `미디어소스`를 쓴다. 조인 전에 매핑해야 한다:
 
-## ⚠️ Not yet defined — needed before scaling this past ad-hoc use
+| appsflyer 미디어소스 | channel 채널 |
+|---|---|
+| `googleadwords_int` | 구글 |
+| `Facebook Ads` | 메타 |
+| `naver_search` | 네이버 |
 
-These require domain knowledge only the marketing team has; do not infer or invent them:
+`how="outer"` + `indicator=True`. 매칭 안 된 행은 버리지 않고 워크벤치에 노출한다.
 
-1. **소재(creative) naming convention.** Observed pattern in current data looks like
-   `{타입}_{테마}_{시즌}_{AB버전}_v{번호}` (e.g. `VID_플러스멤버십_겨울_A_v1`,
-   타입 ∈ {VID, IMG, CRS, TXT}) — **this is inferred from 1 day of sample data, not confirmed.**
-   If this is the real convention, document the allowed values for each segment (creative type
-   codes, whether AB suffix is always present, version numbering rules) so parsing logic can be
-   built on it instead of regex-guessed.
-2. **캠페인 코드 convention.** Observed: `{채널코드}_CMP_{번호}_{목적}` (e.g.
-   `GGL_CMP_01_플러스가입`) — same caveat, needs confirmation + the full list of valid 목적 values.
-3. **그룹(targeting group) taxonomy.** Observed values: 논타겟, 유사타겟, 리마케팅, VIP, 윈백.
-   Confirm this is the complete/stable list before hardcoding it anywhere (e.g. for grouping or
-   filtering UI).
-4. **File replacement policy.** If a day's data is re-uploaded (correction), does the new file
-   overwrite the old `YYYY-MM-DD_*.csv`, or do corrections need a different naming/versioning
-   scheme? Currently the loader just globs by filename, so a same-named file silently overwrites.
+**스키마 비대칭**: `channel`에만 노출·비용이 있다. 양쪽 다 회원가입/구매/구매매출을
+보고하지만 기여 로직이 달라 `_channel` / `_af`로 접미사가 붙는다.
+**대시보드는 `_channel`(매체 리포트)을 정본으로 쓴다** — 네이버가 앱스플라이어 미연동이라
+`_af`를 쓰면 네이버가 통째로 0이 된다.
+
+### 새 채널 추가 체크리스트
+
+1. `marketing_data.py`의 `SOURCE_TO_CHANNEL`에 매핑 추가
+2. `palette.py`의 `CHANNEL_COLOR`에 색 추가 (없으면 차트에서 색이 빠진다)
+
+## 지표
+
+정의·계층·분해식은 [METRICS.md](METRICS.md)에 있다. 지표를 건드리기 전에 읽을 것.
+
+계산은 `marketing_data.agg_by()` 한 곳에만 있다. 화면에서 따로 계산하지 말 것.
+
+## 반복해서 사고가 난 지점
+
+이 저장소에서 실제로 틀린 숫자를 만들었던 것들이다. 새 코드에서도 같은 실수가 나온다.
+
+**비율 지표를 평균내지 말 것.** 채널별 CTR 단순평균은 3.94%, 실제는 2.76%다. 노출
+가중치가 사라져서다. 항상 원시 변수를 합산한 뒤 비율을 재계산한다 (`agg_by`가 강제).
+
+**`st.metric(delta=)`에 숫자로 시작하지 않는 문자열을 넘기지 말 것.** Streamlit은 첫 글자로
+부호를 판단한다. `"목표 800% 대비 -253%p"`는 미달인데 초록 ↑가 뜬다. `+`/`-`로 시작시키고
+설명은 `help=`로 뺀다. CPA·CPC처럼 낮을수록 좋은 지표는 `delta_color="inverse"`.
+
+**중복 키는 조용히 숫자를 부풀린다.** 같은 키가 두 번 있으면 outer join이 에러 없이
+팬아웃한다(실측: 522만 행 → 2,610만 행). 보정본을 `_v2.csv`로 올리면 바로 터진다.
+`duplicate_key_report()`가 조인 **전에** 검사하고 브리핑 최상단에 경고한다.
+
+**엑셀로 열었다 저장한 CSV.** 인덱스 열, `2025.1.1` 형식 날짜, vlookup 중복 열, `#N/A`가
+섞여 들어온다. `normalize()`가 걷어내지만, 새 필드를 추가할 때 이 처리를 빠뜨리기 쉽다.
+
+**`won()`과 `won_exact()`를 구분할 것.** `won()`은 합계 금액용 축약이라 CPA ₩10,995를
+"₩1만"으로 뭉갠다. 목표 ₩8,000과 비교가 안 된다. 단가(CPA/CPC/CPM/AOV)는 `won_exact()`.
+
+**표시값은 반올림돼 있다.** 화면의 분해식 숫자를 손으로 곱하면 1% 이내로 어긋난다.
+검증은 원시 합계로 한다.
+
+## 아직 확정 안 된 것 — 도메인 지식이 필요하다
+
+**추측해서 코드에 넣지 말 것.** 마케팅팀 확인 없이는 구현하지 않는다.
+확정되면 이 절을 지우고 `CONVENTIONS.md`로 옮긴다.
+
+1. **소재 네이밍 컨벤션** — 관측된 패턴 `{타입}_{테마}_{시즌}_{AB}_v{번호}`
+   (예: `VID_플러스멤버십_겨울_A_v1`). **1일치 샘플에서 추론한 것이라 미확정.**
+   현재는 첫 토큰만 `소재타입`으로 파싱한다. A/B 접미사가 있는 소재와 없는 소재가 섞여
+   있어 규칙 없이는 더 못 쪼갠다.
+2. **캠페인 코드 컨벤션** — 관측: `{채널코드}_CMP_{번호}_{목적}`. `캠페인목적`은 CSV에
+   별도 열로 있어 파싱은 불필요하지만, 유효 값의 전체 목록이 필요하다.
+3. **그룹 택소노미** — 관측값: 논타겟, 유사타겟, 리마케팅, VIP, 윈백. 완결 목록인지 미확인.
+4. **순이익의 정의** — 현재 `구매매출 − 매체비`라 **실제 이익이 아니다.** 원가·수수료·
+   배송비가 빠져 있다. 목표 ROAS 800%가 어느 정의 위에서 나온 값인지도 미확인.
+5. **비용의 VAT 포함 여부** — ROAS·CPA에 직접 영향인데 확인 안 됐다.
+6. **어트리뷰션 기준** — `_channel`을 정본으로 쓰는 게 팀 합의인지 미확인. 룩백 윈도우도 미정.
+7. **파일 재업로드 정책** — 보정본을 같은 이름으로 덮어쓸지, 다른 이름을 쓸지. 지금은
+   글롭이라 같은 이름이면 조용히 대체되고, 다른 이름이면 중복 키로 터진다.
+8. **데이터 결손 규칙** — 전날 파일이 안 들어왔을 때 어떻게 할지 (건너뛰기/경고/중단).
+
+## 하지 말 것
+
+- `_af` 컬럼을 정본으로 섞어 쓰기 (네이버가 0이 된다 — 바꾸려면 명시적으로 결정)
+- 결측치 임퓨테이션. 마케팅 데이터의 결측은 "모름"이 아니라 "집행 안 함 / 전환 없음"이다.
+  평균으로 채우면 없던 비용과 매출이 생긴다
+- `charts/`와 `.cache/`를 커밋 (둘 다 재생성 가능, `.gitignore`에 있음)
+- `dashboard.html` 갱신 — 데이터가 하드코딩된 옛 스냅샷이다. 유지보수 대상이 아니며
+  삭제 여부는 사용자 확인 대기 중
