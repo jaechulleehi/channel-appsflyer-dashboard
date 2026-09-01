@@ -1,3 +1,7 @@
 streamlit
 pandas
 altair
+matplotlib
+seaborn
+pyarrow
+pytest

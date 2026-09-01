@@ -2,3 +2,10 @@ __pycache__/
 *.pyc
 .DS_Store
 .streamlit/secrets.toml
+
+# Parquet 캐시 — CSV에서 언제든 재생성됨
+.cache/
+
+# 정적 차트 — eda_charts.py로 재생성됨
+charts/
+.pytest_cache/
