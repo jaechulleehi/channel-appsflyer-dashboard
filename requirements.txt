@@ -1,7 +1,5 @@
+# 대시보드 실행에 필요한 것만. Streamlit Cloud가 이 파일을 읽는다.
 streamlit
 pandas
 altair
-matplotlib
-seaborn
 pyarrow
-pytest

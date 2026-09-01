@@ -1,0 +1,5 @@
+# 로컬 전용: 정적 차트 생성(eda_charts.py)과 테스트
+-r requirements.txt
+matplotlib
+seaborn
+pytest

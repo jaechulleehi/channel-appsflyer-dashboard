@@ -20,8 +20,9 @@ python3 -m pytest test_metrics.py -q                           # 지표 회귀 �
 python3 -m pytest test_metrics.py::test_ROAS_분해식 -v          # 단일 테스트
 ```
 
-의존성: `pip install -r requirements.txt` (streamlit, pandas, altair, matplotlib, seaborn,
-pyarrow, pytest)
+의존성: `pip install -r requirements-dev.txt` (로컬 전체). `requirements.txt`는 대시보드
+실행에 필요한 것만 담는다 — Streamlit Cloud가 이 파일을 읽으므로 정적 차트용
+matplotlib·seaborn을 넣으면 배포가 느려진다.
 
 ## 데이터 추가
 
